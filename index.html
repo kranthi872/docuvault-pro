@@ -10,7 +10,6 @@
 <meta name="theme-color" content="#5B4FE8">
 <title>DocuVault Pro</title>
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -119,21 +118,72 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
 .sl{font-size:12px;color:var(--tx2);margin-top:2px}
 .f1{flex:1}
 .preview-img{width:100%;max-height:200px;object-fit:contain;border-radius:var(--r);background:var(--bg2);margin-bottom:12px}
-.mb10{margin-bottom:10px}
-.mb12{margin-bottom:12px}
+.mb10{margin-bottom:10px}.mb12{margin-bottom:12px}
 .row{display:flex;gap:10px;align-items:center}
-/* install banner */
 #installBanner{display:none;background:var(--acc2);border:0.5px solid var(--acc);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;cursor:pointer}
-/* toast */
 #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.82);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:80vw;text-align:center}
 #toast.show{opacity:1}
+/* Auth screen */
+.auth-box{max-width:360px;margin:0 auto;width:100%;padding:0 8px}
+.auth-logo{text-align:center;padding:32px 0 20px}
+.auth-tab{display:flex;background:var(--bg2);border-radius:var(--rl);padding:3px;margin-bottom:20px}
+.atab{flex:1;padding:9px;border-radius:10px;border:none;background:none;font-size:14px;font-weight:600;color:var(--tx2);cursor:pointer;transition:.2s}
+.atab.on{background:var(--bg);color:var(--acc);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+/* Cloud sync indicator */
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px}
+.sync-dot.syncing{background:var(--warn);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* Loading overlay */
+#loadingOverlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+#loadingOverlay.hidden{display:none}
 </style>
 </head>
 <body>
+<div id="loadingOverlay">
+  <div style="font-size:56px;margin-bottom:16px">🔐</div>
+  <p style="font-size:18px;font-weight:700;color:var(--tx)">DocuVault Pro</p>
+  <p style="font-size:13px;color:var(--tx2);margin-top:8px" id="loadMsg">Loading...</p>
+</div>
+
 <div id="app">
 
+<!-- AUTH SCREEN -->
+<div id="authS" class="screen">
+  <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;min-height:100%">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div style="font-size:56px">🔐</div>
+        <h1 style="font-size:24px;font-weight:700;color:var(--tx);margin-top:10px">DocuVault Pro</h1>
+        <p style="font-size:13px;color:var(--tx2);margin-top:6px">Your documents, safe & secure in the cloud</p>
+      </div>
+      <div class="auth-tab">
+        <button class="atab on" id="loginTab" onclick="switchAuth('login')">Sign In</button>
+        <button class="atab" id="signupTab" onclick="switchAuth('signup')">Create Account</button>
+      </div>
+      <div id="authForm">
+        <div class="mb12" id="nameRow" style="display:none">
+          <label>Your Name</label>
+          <input type="text" id="authName" placeholder="e.g. G. Kranthi">
+        </div>
+        <div class="mb12">
+          <label>Email address</label>
+          <input type="email" id="authEmail" placeholder="you@email.com" autocomplete="email">
+        </div>
+        <div class="mb12">
+          <label>Password</label>
+          <input type="password" id="authPass" placeholder="Min 6 characters" autocomplete="current-password">
+        </div>
+        <div id="authErr" class="errmsg"></div>
+        <button class="btn bp" id="authBtn" onclick="doAuth()">Sign In</button>
+        <p id="forgotLink" style="text-align:center;font-size:13px;color:var(--acc);margin-top:14px;cursor:pointer" onclick="forgotPw()">Forgot password?</p>
+      </div>
+      <p id="authMsg" class="okmsg" style="margin-top:8px"></p>
+    </div>
+  </div>
+</div>
+
 <!-- LOCK SCREEN -->
-<div id="lockS" class="screen active">
+<div id="lockS" class="screen">
   <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;height:100%">
     <div style="text-align:center;padding:24px 0 14px">
       <div style="font-size:56px">🔐</div>
@@ -161,6 +211,7 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
       <div class="key" onclick="kp('del')">⌫</div>
     </div>
     <p id="ftMsg" style="text-align:center;font-size:12px;color:var(--tx2);margin-top:14px"></p>
+    <p style="text-align:center;font-size:12px;color:var(--tx3);margin-top:10px;cursor:pointer" onclick="signOut()">Sign out</p>
   </div>
 </div>
 
@@ -168,7 +219,7 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
 <div id="homeS" class="screen">
   <div class="topbar">
     <div class="f1">
-      <p style="font-size:11px;color:var(--tx2)">Welcome back 👋</p>
+      <p style="font-size:11px;color:var(--tx2)">Welcome back 👋 <span class="sync-dot" id="syncDot"></span><span id="syncLbl" style="font-size:11px;color:var(--tx2)"></span></p>
       <h2 style="font-size:20px">DocuVault Pro</h2>
     </div>
     <button class="ibtn" onclick="nav('alerts')" id="alertBell">🔔</button>
@@ -176,10 +227,6 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
     <button class="ibtn" onclick="doLock()">🔒</button>
   </div>
   <div class="scroll">
-    <div id="installBanner" onclick="installApp()">
-      <p style="font-size:13px;font-weight:600;color:var(--acc3)">📲 Install DocuVault on your phone</p>
-      <p style="font-size:12px;color:var(--acc3);opacity:.8;margin-top:3px">Tap to add to home screen for offline access →</p>
-    </div>
     <div id="srchBar" style="display:none;margin-bottom:10px">
       <input type="text" id="srchIn" placeholder="Search documents, family, notes..." oninput="doSearch(this.value)">
     </div>
@@ -235,7 +282,7 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
     </div>
     <div class="mb12"><label>Notes</label><textarea id="dnotIn" rows="2" placeholder="Extra details..."></textarea></div>
     <div class="mb12">
-      <label>Upload photo / scan</label>
+      <label>Upload photo / scan <span style="color:var(--tx3);font-size:11px">(stored in cloud)</span></label>
       <div style="border:1.5px dashed var(--bd);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;background:var(--bg2)" onclick="document.getElementById('fIn').click()">
         <div id="upPrev" style="font-size:28px;color:var(--tx2)">📎</div>
         <p style="font-size:12px;color:var(--tx2);margin-top:6px" id="upLbl">Tap to upload photo or PDF</p>
@@ -243,7 +290,7 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
       <input type="file" id="fIn" accept="image/*,.pdf" style="display:none" onchange="handleFile(this)">
     </div>
     <div id="addDocErr" class="errmsg"></div>
-    <button class="btn bp" onclick="saveDoc()">Save document</button>
+    <button class="btn bp" onclick="saveDoc()" id="saveDocBtn">Save document</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -339,6 +386,14 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
 <div id="settingsS" class="screen">
   <div class="topbar"><h2>Settings</h2></div>
   <div class="scroll">
+    <div class="stitle">Account</div>
+    <div class="card">
+      <p style="font-size:14px;font-weight:600" id="settEmail">—</p>
+      <p style="font-size:12px;color:var(--ok);margin-top:4px">☁️ Data synced to cloud</p>
+      <div style="margin-top:12px">
+        <button class="btn bo" style="padding:11px;font-size:13px" onclick="signOut()">🚪 Sign out</button>
+      </div>
+    </div>
     <div class="stitle">Security</div>
     <div class="card">
       <div class="toggle-row">
@@ -362,7 +417,7 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
     </div>
     <div class="stitle">Backup & restore</div>
     <div class="card">
-      <p style="font-size:13px;color:var(--tx2);margin-bottom:12px">Export all data as a JSON backup. Import anytime to restore on any device.</p>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:12px">Export all data as a JSON backup file. Import anytime to restore.</p>
       <div id="bkProg" style="display:none;margin-bottom:10px">
         <p style="font-size:12px;color:var(--tx2);margin-bottom:4px" id="bkLbl">Preparing...</p>
         <div class="prog-bar"><div class="prog-fill" id="bkFill" style="width:0%"></div></div>
@@ -392,11 +447,25 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
 <div id="toast"></div>
 </div>
 
+<!-- ===================== FIREBASE ===================== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
-}
+// ========== YOUR FIREBASE CONFIG ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyDIw7XltTAx1S6lC5aBBS5wY50uCUBsQT4",
+  authDomain: "docuvault-pro.firebaseapp.com",
+  projectId: "docuvault-pro",
+  storageBucket: "docuvault-pro.firebasestorage.app",
+  messagingSenderId: "1095248079739",
+  appId: "1:1095248079739:web:2b4bea024daa099004ebde"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
+// ========== CONSTANTS ==========
 const CATS=[
   {id:'id',name:'ID Proofs',icon:'🪪'},{id:'health',name:'Health',icon:'🏥'},
   {id:'edu',name:'Education',icon:'🎓'},{id:'fin',name:'Finance',icon:'🏦'},
@@ -405,23 +474,151 @@ const CATS=[
 ];
 const ACOLORS=[['#EEEDFE','#3C3489'],['#E1F5EE','#085041'],['#FAEEDA','#633806'],['#FAECE7','#4A1B0C'],['#E6F1FB','#042C53'],['#EAF3DE','#173404']];
 
+// ========== APP STATE ==========
 let S={pin:null,pendingPin:null,docs:[],members:[],notes:[],filterCat:'all',curDoc:null,curMem:null,curNote:null,hist:['homeS'],bioEnabled:false,autoLock:true,expAlerts:true};
-let pendImg=null,autoLockTimer=null,deferredInstall=null;
+let pendImg=null,autoLockTimer=null,currentUser=null,userRef=null;
 
-function load(){try{const d=localStorage.getItem('dvp3');if(d)Object.assign(S,JSON.parse(d));}catch(e){}}
-function save(){try{localStorage.setItem('dvp3',JSON.stringify(S));}catch(e){}}
-load();
+// ========== LOADING ==========
+function setLoad(msg){document.getElementById('loadMsg').textContent=msg;}
+function hideLoad(){document.getElementById('loadingOverlay').classList.add('hidden');}
 
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;document.getElementById('installBanner').style.display='block';});
-window.addEventListener('appinstalled',()=>{document.getElementById('installBanner').style.display='none';toast('✓ DocuVault installed on your phone!');});
-function installApp(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>{deferredInstall=null;});}}
+// ========== FIREBASE AUTH ==========
+let authMode='login';
+function switchAuth(m){
+  authMode=m;
+  document.getElementById('loginTab').classList.toggle('on',m==='login');
+  document.getElementById('signupTab').classList.toggle('on',m==='signup');
+  document.getElementById('nameRow').style.display=m==='signup'?'block':'none';
+  document.getElementById('authBtn').textContent=m==='login'?'Sign In':'Create Account';
+  document.getElementById('forgotLink').style.display=m==='login'?'block':'none';
+  document.getElementById('authErr').textContent='';
+  document.getElementById('authMsg').textContent='';
+}
 
+function doAuth(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const errEl=document.getElementById('authErr');
+  errEl.textContent='';
+  if(!email||!pass){errEl.textContent='Please fill all fields.';return;}
+  document.getElementById('authBtn').textContent='Please wait...';
+  document.getElementById('authBtn').disabled=true;
+  if(authMode==='login'){
+    auth.signInWithEmailAndPassword(email,pass)
+      .catch(e=>{errEl.textContent=friendlyErr(e.code);resetAuthBtn();});
+  } else {
+    auth.createUserWithEmailAndPassword(email,pass)
+      .catch(e=>{errEl.textContent=friendlyErr(e.code);resetAuthBtn();});
+  }
+}
+function resetAuthBtn(){
+  const btn=document.getElementById('authBtn');
+  btn.textContent=authMode==='login'?'Sign In':'Create Account';
+  btn.disabled=false;
+}
+function forgotPw(){
+  const email=document.getElementById('authEmail').value.trim();
+  if(!email){document.getElementById('authErr').textContent='Enter your email first.';return;}
+  auth.sendPasswordResetEmail(email).then(()=>{
+    document.getElementById('authMsg').textContent='✓ Reset email sent! Check your inbox.';
+  }).catch(e=>document.getElementById('authErr').textContent=friendlyErr(e.code));
+}
+function friendlyErr(code){
+  const map={'auth/user-not-found':'No account with this email.','auth/wrong-password':'Incorrect password.','auth/email-already-in-use':'Email already registered. Sign in instead.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-email':'Invalid email address.','auth/too-many-requests':'Too many attempts. Try again later.'};
+  return map[code]||'Error: '+code;
+}
+function signOut(){
+  if(!confirm('Sign out of DocuVault?'))return;
+  auth.signOut();
+}
+
+// ========== FIREBASE DATA ==========
+function setSyncStatus(syncing){
+  const dot=document.getElementById('syncDot');
+  const lbl=document.getElementById('syncLbl');
+  if(!dot)return;
+  dot.classList.toggle('syncing',syncing);
+  lbl.textContent=syncing?'Syncing...':'Synced ✓';
+}
+
+async function loadFromCloud(){
+  if(!userRef)return;
+  setSyncStatus(true);
+  try{
+    const doc=await userRef.get();
+    if(doc.exists){
+      const d=doc.data();
+      S.docs=d.docs||[];
+      S.members=d.members||[];
+      S.notes=d.notes||[];
+      S.pin=d.pin||null;
+      S.bioEnabled=d.bioEnabled||false;
+      S.autoLock=d.autoLock!==undefined?d.autoLock:true;
+      S.expAlerts=d.expAlerts!==undefined?d.expAlerts:true;
+    }
+    setSyncStatus(false);
+  }catch(e){setSyncStatus(false);console.error('Load error:',e);}
+}
+
+async function saveToCloud(){
+  if(!userRef)return;
+  setSyncStatus(true);
+  try{
+    await userRef.set({
+      docs:S.docs,members:S.members,notes:S.notes,
+      pin:S.pin||null,bioEnabled:S.bioEnabled,
+      autoLock:S.autoLock,expAlerts:S.expAlerts,
+      updatedAt:new Date().toISOString()
+    });
+    setSyncStatus(false);
+  }catch(e){setSyncStatus(false);toast('⚠️ Sync error — check connection');}
+}
+
+// local fallback
+function localSave(){try{localStorage.setItem('dvp_local',JSON.stringify({pin:S.pin,bioEnabled:S.bioEnabled,autoLock:S.autoLock,expAlerts:S.expAlerts}));}catch(e){}}
+function save(){saveToCloud();localSave();}
+
+// ========== AUTH STATE LISTENER ==========
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    currentUser=user;
+    userRef=db.collection('users').doc(user.uid);
+    setLoad('Loading your data...');
+    await loadFromCloud();
+    hideLoad();
+    // restore local prefs (pin, bio) from localStorage as backup
+    try{const lc=localStorage.getItem('dvp_local');if(lc){const p=JSON.parse(lc);if(!S.pin&&p.pin)S.pin=p.pin;}}catch(e){}
+    // show settings email
+    const se=document.getElementById('settEmail');
+    if(se)se.textContent=user.email;
+    // go to lock or home
+    if(S.pin){
+      document.getElementById('lockSub').textContent='Enter your PIN to unlock';
+      document.getElementById('ftMsg').textContent='';
+      document.getElementById('bioArea').style.display=S.bioEnabled?'block':'none';
+      showS('lockS');
+    } else {
+      document.getElementById('lockSub').textContent='Create a 4-digit PIN';
+      document.getElementById('ftMsg').textContent='Choose a PIN you will remember';
+      showS('lockS');
+    }
+    renderHome();renderDocs();renderFamily();renderNotes();renderSettings();
+  } else {
+    currentUser=null;userRef=null;
+    hideLoad();
+    showS('authS');
+  }
+});
+
+// ========== TOAST ==========
 function toast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 
+// ========== AUTO LOCK ==========
 function resetAL(){if(!S.autoLock||!S.pin)return;clearTimeout(autoLockTimer);autoLockTimer=setTimeout(()=>doLock(),5*60*1000);}
 document.addEventListener('touchstart',resetAL,{passive:true});
 document.addEventListener('click',resetAL);
 
+// ========== PIN / LOCK ==========
 let pinBuf='';
 function kp(k){
   const err=document.getElementById('lockErr');
@@ -444,16 +641,12 @@ function kp(k){
   }
 }
 function rDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('on',i<pinBuf.length);}
-
 function tryBio(){
   if(!S.bioEnabled){toast('Enable fingerprint in Settings first.');return;}
   if('PublicKeyCredential' in window){
-    navigator.credentials.get({publicKey:{challenge:new Uint8Array(32),allowCredentials:[],userVerification:'required'}}).then(()=>doUnlock()).catch(()=>{
-      document.getElementById('lockErr').textContent='Biometric auth failed.';
-    });
+    navigator.credentials.get({publicKey:{challenge:new Uint8Array(32),allowCredentials:[],userVerification:'required'}}).then(()=>doUnlock()).catch(()=>{document.getElementById('lockErr').textContent='Biometric auth failed.';});
   } else {
-    const bb=document.querySelector('.biobox');
-    bb.style.background='var(--ok2)';
+    const bb=document.querySelector('.biobox');if(bb)bb.style.background='var(--ok2)';
     setTimeout(()=>doUnlock(),400);
   }
 }
@@ -473,9 +666,8 @@ function doLock(){
   document.getElementById('bioArea').style.display=(S.pin&&S.bioEnabled)?'block':'none';
   showS('lockS');
 }
-if(!S.pin){document.getElementById('lockSub').textContent='Create a 4-digit PIN';document.getElementById('ftMsg').textContent='Choose a PIN you will remember';}
-else document.getElementById('bioArea').style.display=S.bioEnabled?'block':'none';
 
+// ========== NAVIGATION ==========
 function showS(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function nav(p){
   const map={home:'homeS',docs:'docsS',family:'familyS',notes:'notesS',addDoc:'addDocS',addMem:'addMemS',addNote:'addNoteS',viewDoc:'viewDocS',viewMem:'viewMemS',viewNote:'viewNoteS',alerts:'alertsS',settings:'settingsS'};
@@ -492,6 +684,7 @@ function goTab(i){
   [renderHome,renderDocs,renderFamily,renderNotes,renderSettings][i]();
 }
 
+// ========== EXPIRY / ALERTS ==========
 function expBadge(exp){
   if(!exp)return '';
   const d=Math.ceil((new Date(exp)-new Date())/(864e5));
@@ -502,10 +695,11 @@ function expBadge(exp){
 }
 function getAlerts(){return S.docs.filter(d=>{if(!d.exp||!S.expAlerts)return false;return Math.ceil((new Date(d.exp)-new Date())/(864e5))<=90;});}
 
+// ========== RENDER HOME ==========
 function renderHome(){
   const al=getAlerts();
   const bell=document.getElementById('alertBell');
-  bell.style.color=al.length?'var(--err)':'';
+  if(bell)bell.style.color=al.length?'var(--err)':'';
   const ab=document.getElementById('alertBanner');
   if(al.length&&S.expAlerts){
     const exp=al.filter(d=>Math.ceil((new Date(d.exp)-new Date())/(864e5))<0).length;
@@ -515,11 +709,14 @@ function renderHome(){
       <p style="font-size:13px;font-weight:600;color:var(--err3)">⚠️ ${exp?exp+' expired':''}${exp&&soon?' · ':''}${soon?soon+' expiring soon':''}</p>
       <p style="font-size:12px;color:var(--err3);opacity:.8">Tap to view all alerts →</p>
     </div>`;
-  }else ab.style.display='none';
-  document.getElementById('statGrid').innerHTML=[{v:S.docs.length,l:'Documents'},{v:S.members.length,l:'Family'},{v:S.notes.length,l:'Notes'},{v:al.length,l:'Alerts'}].map(x=>`<div class="stat"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
-  document.getElementById('catGrid').innerHTML=CATS.map(c=>{const cnt=S.docs.filter(d=>d.cat===c.id).length;return`<div class="catcard" onclick="openCat('${c.id}')"><div class="ci">${c.icon}</div><div class="cn">${c.name}</div><div class="cc">${cnt} doc${cnt!==1?'s':''}</div></div>`;}).join('');
+  }else if(ab){ab.style.display='none';}
+  const sg=document.getElementById('statGrid');
+  if(sg)sg.innerHTML=[{v:S.docs.length,l:'Documents'},{v:S.members.length,l:'Family'},{v:S.notes.length,l:'Notes'},{v:al.length,l:'Alerts'}].map(x=>`<div class="stat"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
+  const cg=document.getElementById('catGrid');
+  if(cg)cg.innerHTML=CATS.map(c=>{const cnt=S.docs.filter(d=>d.cat===c.id).length;return`<div class="catcard" onclick="openCat('${c.id}')"><div class="ci">${c.icon}</div><div class="cn">${c.name}</div><div class="cc">${cnt} doc${cnt!==1?'s':''}</div></div>`;}).join('');
   const recent=[...S.docs].reverse().slice(0,5);
-  document.getElementById('recentList').innerHTML=recent.length?recent.map(d=>dHTML(d)).join(''):`<p style="font-size:13px;color:var(--tx2)">No documents yet. Add your first one!</p>`;
+  const rl=document.getElementById('recentList');
+  if(rl)rl.innerHTML=recent.length?recent.map(d=>dHTML(d)).join(''):`<p style="font-size:13px;color:var(--tx2)">No documents yet. Add your first one!</p>`;
 }
 function renderAlerts(){
   const al=getAlerts();const el=document.getElementById('alertsList');
@@ -528,20 +725,23 @@ function renderAlerts(){
 }
 function openCat(id){S.filterCat=id;goTab(1);}
 
+// ========== RENDER DOCS ==========
 function renderDocs(){
   const all=[{id:'all',name:'All',icon:'📑'},...CATS];
-  document.getElementById('catTags').innerHTML=all.map(c=>`<span class="tag${S.filterCat===c.id?' on':''}" onclick="filterC('${c.id}')">${c.icon} ${c.name}</span>`).join('');
+  const ct=document.getElementById('catTags');
+  if(ct)ct.innerHTML=all.map(c=>`<span class="tag${S.filterCat===c.id?' on':''}" onclick="filterC('${c.id}')">${c.icon} ${c.name}</span>`).join('');
   const list=S.filterCat==='all'?S.docs:S.docs.filter(d=>d.cat===S.filterCat);
-  document.getElementById('docsList').innerHTML=list.length?list.map(d=>dHTML(d)).join(''):`<p style="font-size:13px;color:var(--tx2);padding:8px 0">No documents here yet.</p>`;
+  const dl=document.getElementById('docsList');
+  if(dl)dl.innerHTML=list.length?list.map(d=>dHTML(d)).join(''):`<p style="font-size:13px;color:var(--tx2);padding:8px 0">No documents here yet.</p>`;
 }
 function filterC(id){S.filterCat=id;renderDocs();}
 function dHTML(d){
   const c=CATS.find(x=>x.id===d.cat)||CATS[7];
-  const th=d.img?`<img src="${d.img}" alt="">`:c.icon;
   const eb=expBadge(d.exp);
-  return`<div class="docitem" onclick="openDoc('${d.id}')"><div class="dthumb">${d.img?`<img src="${d.img}" alt="">`:eb?'<span style="font-size:20px">'+c.icon+'</span>':'<span style="font-size:20px">'+c.icon+'</span>'}</div><div class="dinfo"><div class="dname">${d.name}</div><div class="dmeta">${c.name}${d.num?' · '+d.num:''}${eb?' '+eb:''}</div></div><button class="ibtn" onclick="event.stopPropagation();quickShare('${d.id}')">↑</button></div>`;
+  return`<div class="docitem" onclick="openDoc('${d.id}')"><div class="dthumb">${d.img?`<img src="${d.img}" alt="">`:`<span style="font-size:20px">${c.icon}</span>`}</div><div class="dinfo"><div class="dname">${d.name}</div><div class="dmeta">${c.name}${d.num?' · '+d.num:''}${eb?' '+eb:''}</div></div><button class="ibtn" onclick="event.stopPropagation();quickShare('${d.id}')">↑</button></div>`;
 }
 
+// ========== ADD / VIEW DOC ==========
 function prepAddDoc(){
   ['dnIn','dnumIn','dnotIn'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('dexpIn').value='';
@@ -554,23 +754,48 @@ function prepAddDoc(){
   if(S.filterCat!=='all')sel.value=S.filterCat;
   S.curDoc=null;pendImg=null;
 }
+
 function handleFile(inp){
   const f=inp.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=e=>{
-    pendImg=e.target.result;
-    document.getElementById('upPrev').innerHTML=f.type.startsWith('image/')?`<img src="${e.target.result}" style="width:100%;height:72px;object-fit:cover;border-radius:6px">`:'📄';
-    document.getElementById('upLbl').textContent=f.name;
-  };r.readAsDataURL(f);
+  // Compress images to keep size small for Firestore (max ~800px)
+  if(f.type.startsWith('image/')){
+    const img=new Image();
+    const url=URL.createObjectURL(f);
+    img.onload=()=>{
+      const MAX=800;let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      pendImg=canvas.toDataURL('image/jpeg',0.7);
+      document.getElementById('upPrev').innerHTML=`<img src="${pendImg}" style="width:100%;height:72px;object-fit:cover;border-radius:6px">`;
+      document.getElementById('upLbl').textContent=f.name+' (compressed)';
+      URL.revokeObjectURL(url);
+    };img.src=url;
+  } else {
+    const r=new FileReader();
+    r.onload=e=>{
+      pendImg=e.target.result;
+      document.getElementById('upPrev').innerHTML='📄';
+      document.getElementById('upLbl').textContent=f.name;
+    };r.readAsDataURL(f);
+  }
 }
+
 function saveDoc(){
   const name=document.getElementById('dnIn').value.trim();
   const cat=document.getElementById('dcIn').value;
   if(!name){document.getElementById('addDocErr').textContent='Enter a document name.';return;}
   if(!cat){document.getElementById('addDocErr').textContent='Select a category.';return;}
+  const btn=document.getElementById('saveDocBtn');
+  btn.textContent='Saving...';btn.disabled=true;
   const d={id:'d'+Date.now(),name,cat,num:document.getElementById('dnumIn').value.trim(),exp:document.getElementById('dexpIn').value,note:document.getElementById('dnotIn').value.trim(),img:pendImg||null,date:new Date().toLocaleDateString('en-IN')};
-  S.docs.push(d);pendImg=null;save();renderHome();renderDocs();toast('✓ Document saved!');goBack();
+  S.docs.push(d);pendImg=null;
+  save();renderHome();renderDocs();toast('✓ Document saved to cloud!');
+  btn.textContent='Save document';btn.disabled=false;
+  goBack();
 }
+
 function openDoc(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   S.curDoc=id;
@@ -594,8 +819,10 @@ function share(m,id){
 }
 function quickShare(id){S.curDoc=id;share('wa',id);}
 
+// ========== FAMILY ==========
 function renderFamily(){
-  document.getElementById('memList').innerHTML=S.members.length
+  const ml=document.getElementById('memList');if(!ml)return;
+  ml.innerHTML=S.members.length
     ?S.members.map((m,i)=>{const ini=m.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const[bg,tx]=ACOLORS[i%ACOLORS.length];return`<div class="memcard" onclick="openMem('${m.id}')"><div class="ava" style="background:${bg};color:${tx}">${ini}</div><div class="f1"><div style="font-size:14px;font-weight:600">${m.name}</div><div style="font-size:12px;color:var(--tx2)">${m.relation}${m.blood?' · '+m.blood:''}</div></div><span style="color:var(--tx2)">›</span></div>`;}).join('')
     :`<div class="card" style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:8px">👨‍👩‍👦</div><p style="font-size:14px;color:var(--tx2)">Store Aadhaar, PAN and info for all family members.</p><button class="btn bp" style="margin-top:12px;padding:11px;font-size:13px" onclick="nav('addMem')">Add first member</button></div>`;
 }
@@ -603,7 +830,7 @@ function saveMem(){
   const name=document.getElementById('mnIn').value.trim();const rel=document.getElementById('mrIn').value.trim();
   if(!name||!rel){document.getElementById('addMemErr').textContent='Name and relation required.';return;}
   S.members.push({id:'m'+Date.now(),name,relation:rel,aadhar:document.getElementById('maIn').value.trim(),pan:document.getElementById('mpIn').value.trim(),dob:document.getElementById('mdIn').value,phone:document.getElementById('mphIn').value.trim(),blood:document.getElementById('mbIn').value.trim(),note:document.getElementById('mnoteIn').value.trim()});
-  save();renderFamily();toast('✓ Member saved!');goBack();
+  save();renderFamily();toast('✓ Member saved to cloud!');goBack();
 }
 function openMem(id){
   const m=S.members.find(x=>x.id===id);if(!m)return;
@@ -614,8 +841,10 @@ function openMem(id){
 }
 function delMem(){if(!confirm('Remove this member?'))return;S.members=S.members.filter(m=>m.id!==S.curMem);save();goBack();renderFamily();toast('Member removed.');}
 
+// ========== NOTES ==========
 function renderNotes(){
-  document.getElementById('notesList').innerHTML=S.notes.length
+  const nl=document.getElementById('notesList');if(!nl)return;
+  nl.innerHTML=S.notes.length
     ?S.notes.map(n=>`<div class="note-item" onclick="openNote('${n.id}')"><div class="nt">${n.title||'Untitled'}</div><div class="np">${n.body||''}</div><div class="nd">${n.date}</div></div>`).join('')
     :`<div class="card" style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:8px">📝</div><p style="font-size:14px;color:var(--tx2)">Jot down passwords, account numbers, or any important info.</p><button class="btn bp" style="margin-top:12px;padding:11px;font-size:13px" onclick="nav('addNote')">Write first note</button></div>`;
 }
@@ -623,7 +852,7 @@ function saveNote(){
   const title=document.getElementById('ntIn').value.trim();const body=document.getElementById('nbIn').value.trim();
   if(!title&&!body){goBack();return;}
   S.notes.unshift({id:'n'+Date.now(),title:title||'Untitled',body,date:new Date().toLocaleDateString('en-IN')});
-  save();renderNotes();toast('✓ Note saved!');goBack();
+  save();renderNotes();toast('✓ Note saved to cloud!');goBack();
 }
 function openNote(id){
   const n=S.notes.find(x=>x.id===id);if(!n)return;
@@ -633,6 +862,7 @@ function openNote(id){
 }
 function delNote(){if(!confirm('Delete this note?'))return;S.notes=S.notes.filter(n=>n.id!==S.curNote);save();goBack();renderNotes();toast('Note deleted.');}
 
+// ========== SEARCH ==========
 function toggleSearch(){const sb=document.getElementById('srchBar');const on=sb.style.display==='none'||!sb.style.display;sb.style.display=on?'block':'none';if(on)document.getElementById('srchIn').focus();else{document.getElementById('srchRes').style.display='none';document.getElementById('homeBody').style.display='';document.getElementById('srchIn').value='';}}
 function doSearch(q){
   q=q.toLowerCase().trim();const res=document.getElementById('srchRes');const hb=document.getElementById('homeBody');
@@ -647,17 +877,21 @@ function doSearch(q){
     (!md.length&&!mm.length&&!mn.length?`<p style="font-size:14px;color:var(--tx2);padding:12px 0">No results for "${q}"</p>`:'');
 }
 
+// ========== SETTINGS ==========
 function toggleBio(el){S.bioEnabled=el.checked;save();if(S.bioEnabled)toast('Fingerprint unlock enabled!');}
 function toggleAL(el){S.autoLock=el.checked;save();if(S.autoLock)resetAL();}
 function saveSett(){S.expAlerts=document.getElementById('expToggle').checked;save();}
-function changePin(){if(!confirm('Change your PIN? You will be locked out and need to set a new one.'))return;S.pin=null;S.pendingPin=null;save();doLock();document.getElementById('lockSub').textContent='Create a new 4-digit PIN';}
+function changePin(){if(!confirm('Change your PIN? You will need to set a new one.'))return;S.pin=null;S.pendingPin=null;save();doLock();document.getElementById('lockSub').textContent='Create a new 4-digit PIN';}
 function renderSettings(){
-  document.getElementById('bioToggle').checked=S.bioEnabled;
-  document.getElementById('autoLockToggle').checked=S.autoLock;
-  document.getElementById('expToggle').checked=S.expAlerts;
-  document.getElementById('settStats').innerHTML=[{v:S.docs.length,l:'Documents'},{v:S.members.length,l:'Family members'},{v:S.notes.length,l:'Notes'},{v:getAlerts().length,l:'Active alerts'}].map(x=>`<div class="stat"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
+  const bio=document.getElementById('bioToggle');if(bio)bio.checked=S.bioEnabled;
+  const al=document.getElementById('autoLockToggle');if(al)al.checked=S.autoLock;
+  const exp=document.getElementById('expToggle');if(exp)exp.checked=S.expAlerts;
+  const em=document.getElementById('settEmail');if(em&&currentUser)em.textContent=currentUser.email;
+  const ss=document.getElementById('settStats');
+  if(ss)ss.innerHTML=[{v:S.docs.length,l:'Documents'},{v:S.members.length,l:'Family members'},{v:S.notes.length,l:'Notes'},{v:getAlerts().length,l:'Active alerts'}].map(x=>`<div class="stat"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
 }
 
+// ========== BACKUP ==========
 function doBackup(){
   const bp=document.getElementById('bkProg');const msg=document.getElementById('bkMsg');const lbl=document.getElementById('bkLbl');const fill=document.getElementById('bkFill');
   bp.style.display='block';msg.textContent='';let p=0;
@@ -669,7 +903,7 @@ function doBackup(){
     else{lbl.textContent='Done!';clearInterval(iv);
       setTimeout(()=>{
         bp.style.display='none';
-        const data={version:3,app:'DocuVault Pro',exported:new Date().toISOString(),docs:S.docs,members:S.members,notes:S.notes};
+        const data={version:4,app:'DocuVault Pro',exported:new Date().toISOString(),docs:S.docs,members:S.members,notes:S.notes};
         const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
         const url=URL.createObjectURL(blob);const a=document.createElement('a');
         a.href=url;a.download='DocuVault_'+new Date().toLocaleDateString('en-IN').replace(/\//g,'-')+'.json';
@@ -695,8 +929,6 @@ function doRestore(inp){
     }catch(ex){msg.style.color='var(--err)';msg.textContent='Invalid backup file.';}
   };r.readAsText(f);inp.value='';
 }
-
-renderHome();
 </script>
 </body>
 </html>

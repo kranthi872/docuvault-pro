@@ -338,6 +338,14 @@ label{font-size:13px;color:var(--tx2);margin-bottom:5px;display:block}
     <div class="mb12"><label>Phone number</label><input type="tel" id="mphIn" placeholder="10-digit mobile"></div>
     <div class="mb12"><label>Blood group</label><input type="text" id="mbIn" placeholder="e.g. O+"></div>
     <div class="mb12"><label>Notes</label><textarea id="mnoteIn" rows="2" placeholder="Insurance no., health conditions..."></textarea></div>
+    <div class="mb12">
+  <label>Upload photo <span style="color:var(--tx3);font-size:11px">stored in cloud</span></label>
+  <div style="border:1.5px dashed var(--bd);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;background:var(--bg2)" onclick="document.getElementById('mfIn').click()">
+    <div id="memUpPrev" style="font-size:28px;color:var(--tx2)">👤</div>
+    <p style="font-size:12px;color:var(--tx2);margin-top:6px" id="memUpLbl">Tap to upload member photo</p>
+  </div>
+  <input type="file" id="mfIn" accept="image/*" style="display:none" onchange="handleMemFile(this)">
+</div>
     <div id="addMemErr" class="errmsg"></div>
     <button class="btn bp" onclick="saveMem()">Save member</button>
     <div style="height:20px"></div>
